@@ -54,7 +54,7 @@ def getNextRec(clause, vars):
 			c = vars[i]
 			break
 
-	print("Char: " + c)
+	#print("Char: " + c)
 
 	return NextRec(c, RecType.BOTH)
 
@@ -103,8 +103,8 @@ def base_DPLL(clause, vars, inter):
             if(lit == ""):
                 return False
 
-    print(vars)
-    print(clause)
+    #print(vars)
+    #print(clause)
 
     nextRec = getNextRec(clause, vars)
 
