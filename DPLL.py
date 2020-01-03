@@ -1,16 +1,29 @@
-import sys
+#!/usr/bin/python3
 
+import sys
+from enum import Enum, auto
 #We will define variables in lowercase as variables with no negation and characters in uppercase as variables in negation
 # -a = A
 # a = a
 
 #Definitions--------------------------------------------------------
 
-#CLI Arguments
-args = sys.argv[1:]
+#Enum to cover the case:
+#FALSE: The DPLL recursion should go on with false
+#TRUE: The DPLL recursion should go on with true
+#BOTH: The DPLL recursion should go on with both branches
+class RecType(Enum):
+	FALSE = auto()
+	TRUE = auto()
+	BOTH = auto()
 
-#Later will be the list of variables
-vars = []
+#Defining type of recursion.
+#var: defines which variable will be used next
+#type: defines which branches the recursion will take
+class NextRec:
+	def __init__(self, var, recType):
+		self.var = var
+		self.type = recType
 
 #checks whether a character c exists in character list varlist
 #return True: c doesn't exist in varlist
@@ -21,12 +34,65 @@ def setCheck(c, varList):
             return False
     return True
 
+#Gets the next variable to use. If no heuristic it just uses the order of
+# variables in vars to determine which variable is next.
+#If a heuristic is applicable, that heuristic is used.
+def getNextRec(clause, vars):
+	#TODO code for OLR/PLR heuristic
+
+	c = '?'
+
+	clauseVars = ""
+
+	for lit in clause:
+		clauseVars += lit
+
+	clauseVars = clauseVars.lower()
+
+	for i in range(len(vars)):
+		if(not setCheck(vars[i], clauseVars)):
+			c = vars[i]
+			break
+
+	print("Char: " + c)
+
+	return NextRec(c, RecType.BOTH)
+
+def genBranch(clause, nextRec, bool):
+	branch = []
+	
+	if(bool):
+		#Generation of trueBranch
+	    for lit in clause:
+	        if(not setCheck(nextRec.var, lit)):
+	            continue
+	        temp = lit.replace(nextRec.var.upper(), "")
+	        if(setCheck(temp, branch)):
+	            branch.append(temp)
+	else:
+		#Generation of falseBranch
+	    for lit in clause:
+	        if(not setCheck(nextRec.var.upper(), lit)):
+	            continue
+	        temp = lit.replace(nextRec.var, "")
+	        if(setCheck(temp, branch)):
+	            branch.append(temp)
+
+	return branch
+
+#Sets the interpretation of var with the value of bool. The value of bool is True, False
+#but inter is an array of 0 and 1
+def setInter(inter, vars, var, bool):
+	for i in range(len(vars)):
+		if(vars[i] == var):
+			inter[i] = 1 if bool else 0
+
 #Base DPLL
 #clause: a list of strings
 #vars: list of variables (just so that no global vars are used)
-#depth: Recursion(assuming no heuristics) depth and index of the current character
 #inter: Interpretation - Belegung in german
-def base_DPLL(clause, vars, depth, inter):
+def base_DPLL(clause, vars, inter):
+
     #Checks whether to end Recursion
     if(len(clause)==0):
         print(vars)
@@ -37,63 +103,55 @@ def base_DPLL(clause, vars, depth, inter):
             if(lit == ""):
                 return False
 
-    trueBranch = []
-    falseBranch = []
-    char = vars[depth]
+    print(vars)
+    print(clause)
 
-    #Generation of trueBranch
-    for lit in clause:
-        if(not setCheck(char, lit)):
-            continue
-        temp = lit.replace(char.upper(), "")
-        if(setCheck(temp, trueBranch)):
-            trueBranch.append(temp)
+    nextRec = getNextRec(clause, vars)
 
-    #Print Debug
-    #print(trueBranch)
-    inter[depth] = 1
-    if(base_DPLL(trueBranch, vars, depth+1, inter)):
-        return True
+    if(nextRec.type == RecType.TRUE or nextRec.type == RecType.BOTH):
+    	#Generation of trueBranch
+    	trueBranch = genBranch(clause, nextRec, True)
+    	setInter(inter, vars, nextRec.var, True)
+    	
+    	if(base_DPLL(trueBranch, vars, inter)):
+        	return True
 
-    #Generation of trueBranch
-    for lit in clause:
-        if(not setCheck(char.upper(), lit)):
-            continue
-        temp = lit.replace(char, "")
-        if(setCheck(temp, falseBranch)):
-            falseBranch.append(temp)
+    if(nextRec.type == RecType.FALSE or nextRec.type == RecType.BOTH):
+	    #Generation of falseBranch
+	    falseBranch = genBranch(clause, nextRec, False)
+	    setInter(inter, vars, nextRec.var, False)
+	    
+	    if(base_DPLL(falseBranch, vars, inter)):
+        	return True
 
-    #Print Debug
-    #print(falseBranch)
-
-    inter[depth] = 0
-    if(base_DPLL(falseBranch, vars, depth+1, inter)):
-        return True
 
     return False
-
-def OLR():
-    pass
-
-def PLR():
-    pass
 
 #Initializing function
 def DPLL(clause, vars):
     inter = []
     for v in vars:
         inter.append(-1) #-1 if an interpretation isnt assigned
-    base_DPLL(clause, vars, 0, inter)
+    base_DPLL(clause, vars, inter)
     return
 
+
+#Global Variables---------------------------------------------------
+
+#CLI Arguments
+g_args = sys.argv[1:]
+
+#Later will be the list of variables
+g_vars = []
 
 #Code---------------------------------------------------------------
 
 #Generation of variable list
-for arg in args:
+for arg in g_args:
     temp = arg.lower()
     for c in temp:
-        if(setCheck(c, vars)):
-            vars.append(c)
-vars.sort()
-DPLL(args, vars)
+        if(setCheck(c, g_vars)):
+            g_vars.append(c)
+g_vars.sort()
+
+DPLL(g_args, g_vars)
